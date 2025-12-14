@@ -1,0 +1,133 @@
+DROP TABLE IF EXISTS Employee_Project;
+DROP TABLE IF EXISTS Dependents;
+DROP TABLE IF EXISTS Project;
+IF OBJECT_ID('dbo.Employee', 'U') IS NOT NULL ALTER TABLE Employee DROP CONSTRAINT IF EXISTS FK_Employee_Department;
+IF OBJECT_ID('dbo.Department', 'U') IS NOT NULL ALTER TABLE Department DROP CONSTRAINT IF EXISTS FK_Department_Manager;
+DROP TABLE IF EXISTS Employee;
+DROP TABLE IF EXISTS Department;
+GO
+
+CREATE TABLE Department (
+    Dnum INT PRIMARY KEY,
+    Dname NVARCHAR(50) NOT NULL UNIQUE,
+    Location NVARCHAR(100),
+    ESSN INT, 
+    Hire_date DATE NOT NULL
+);
+
+CREATE TABLE Employee (
+    SSN INT PRIMARY KEY,
+    Fname NVARCHAR(50) NOT NULL,
+    Lname NVARCHAR(50) NOT NULL,
+    Birthdate DATE NOT NULL,
+    Gender CHAR(1) CHECK (Gender IN ('M', 'F')),
+    Dnum INT NOT NULL,
+    SuperViser INT
+);
+
+CREATE TABLE Project (
+    Pnum INT PRIMARY KEY,
+    PName NVARCHAR(100) NOT NULL,
+    City NVARCHAR(50) NOT NULL,
+    DNUM INT NOT NULL
+);
+
+CREATE TABLE Dependents (
+    Dependent_Name NVARCHAR(50),
+    SSN INT,
+    Birthdate DATE NOT NULL,
+    Gender CHAR(1) CHECK (Gender IN ('M', 'F')),
+    PRIMARY KEY (Dependent_Name, SSN)
+);
+
+CREATE TABLE Employee_Project (
+    SSN INT,
+    Pnum INT,
+    Working_hours DECIMAL(10, 2) NOT NULL,
+    PRIMARY KEY (SSN, Pnum)
+);
+GO
+
+ALTER TABLE Employee
+ADD CONSTRAINT FK_Employee_Department FOREIGN KEY (Dnum)
+REFERENCES Department(Dnum);
+
+ALTER TABLE Employee
+ADD CONSTRAINT FK_Employee_Supervisor FOREIGN KEY (SuperViser)
+REFERENCES Employee(SSN);
+
+ALTER TABLE Department
+ADD CONSTRAINT FK_Department_Manager FOREIGN KEY (ESSN)
+REFERENCES Employee(SSN);
+
+ALTER TABLE Project
+ADD CONSTRAINT FK_Project_Department FOREIGN KEY (DNUM)
+REFERENCES Department(Dnum);
+
+ALTER TABLE Dependents
+ADD CONSTRAINT FK_Dependents_Employee FOREIGN KEY (SSN)
+REFERENCES Employee(SSN)
+ON DELETE CASCADE;
+
+ALTER TABLE Employee_Project
+ADD CONSTRAINT FK_WorksOn_Employee FOREIGN KEY (SSN)
+REFERENCES Employee(SSN);
+
+ALTER TABLE Employee_Project
+ADD CONSTRAINT FK_WorksOn_Project FOREIGN KEY (Pnum)
+REFERENCES Project(Pnum);
+GO
+
+INSERT INTO Department (Dnum, Dname, Location, ESSN, Hire_date) VALUES 
+(10, 'Software Engineering', 'Cairo', NULL, '2020-01-01'),
+(20, 'HR', 'Alexandria', NULL, '2019-05-15'),
+(30, 'Sales', 'Giza', NULL, '2021-03-10');
+
+INSERT INTO Employee (SSN, Fname, Lname, Birthdate, Gender, Dnum, SuperViser) VALUES 
+(101, 'Ahmed', 'Ali', '1990-05-10', 'M', 10, NULL),
+(102, 'Sara', 'Hassan', '1995-08-22', 'F', 10, 101),      
+(103, 'Mona', 'Said', '1988-12-01', 'F', 20, NULL),
+(104, 'Omar', 'Khaled', '1992-07-14', 'M', 30, NULL),
+(105, 'Kareem', 'Essam', '1998-11-30', 'M', 10, 101);     
+
+UPDATE Department SET ESSN = 101 WHERE Dnum = 10;
+UPDATE Department SET ESSN = 103 WHERE Dnum = 20;
+UPDATE Department SET ESSN = 104 WHERE Dnum = 30;
+
+INSERT INTO Project (Pnum, PName, City, DNUM) VALUES 
+(500, 'Website Redesign', 'Cairo', 10),
+(600, 'Employee Portal', 'Alexandria', 20),
+(700, 'Marketing Campaign', 'Giza', 30);
+
+INSERT INTO Dependents (Dependent_Name, SSN, Birthdate, Gender) VALUES 
+('Zena', 101, '2015-02-10', 'F'),
+('Youssef', 103, '2018-06-20', 'M');
+
+INSERT INTO Employee_Project (SSN, Pnum, Working_hours) VALUES 
+(101, 500, 20.5),
+(102, 500, 40.0),
+(105, 500, 35.0),
+(103, 600, 15.0),
+(104, 700, 10.0);
+GO
+
+UPDATE Employee 
+SET Dnum = 20 
+WHERE SSN = 105;
+SELECT * FROM Employee WHERE SSN = 105;
+
+DELETE FROM Dependents 
+WHERE Dependent_Name = 'Zena' AND SSN = 101;
+SELECT * FROM Dependents;
+
+SELECT * FROM Employee 
+WHERE Dnum = 10;
+
+SELECT 
+    E.Fname + ' ' + E.Lname AS EmployeeName,
+    P.PName AS ProjectName,
+    EP.Working_hours
+FROM Employee E
+JOIN Employee_Project EP ON E.SSN = EP.SSN
+JOIN Project P ON EP.Pnum = P.Pnum;
+GO
