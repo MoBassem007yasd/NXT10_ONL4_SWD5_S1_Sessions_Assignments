@@ -1,0 +1,28 @@
+-- 1
+SELECT
+    *,
+    CASE
+        WHEN list_price < 300 THEN 'Economy'
+        WHEN list_price BETWEEN 300 AND 999 THEN 'Standard'
+        WHEN list_price BETWEEN 1000 AND 2499 THEN 'Premium'
+        ELSE 'Luxury'
+    END AS price_category
+FROM production.products
+ORDER BY list_price;
+
+-- 2
+SELECT
+    *,
+    CASE
+        WHEN order_status = 1 THEN 'Order Received'
+        WHEN order_status = 2 THEN 'In Preparation'
+        WHEN order_status = 3 THEN 'Order Cancelled'
+        ELSE 'Order Delivered'
+    END AS order_status_description,
+    CASE
+        WHEN order_date < GETDATE() - 5 AND order_status = 1 THEN 'URGENT'
+        WHEN order_date < GETDATE() - 3 AND order_status = 2 THEN 'HIGH'
+        ELSE 'NORMAL'
+    END AS order_priority_level
+FROM sales.orders
+ORDER BY order_date;
