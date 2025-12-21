@@ -1,0 +1,129 @@
+-- 1
+SELECT COUNT(*) AS TOTAL_NO_OF_PRODUCTS
+FROM production.products
+
+-- 2
+SELECT AVG(list_price) AS AVG_PRICE,MIN(list_price) AS MIN_PRICE, MAX(list_price) AS MAX_PRICE
+FROM production.products
+
+-- 3 (ordered by category_id for better display)
+SELECT category_id as category_id, COUNT(*) AS TOTAL_NO_OF_PRODUCTS
+FROM production.products
+GROUP BY category_id
+ORDER BY category_id
+
+-- 4 (ordered by store_id for better display)
+SELECT store_id as store_id, COUNT(*) AS TOTAL_NO_OF_ORDERS
+FROM sales.orders
+GROUP BY store_id
+ORDER BY store_id
+
+-- 5
+SELECT UPPER(first_name) AS FIRST_NAME,LOWER(last_name) AS LAST_NAME
+FROM sales.customers
+ORDER BY customer_id
+OFFSET 0 ROWS FETCH NEXT 10 ROWS ONLY
+
+-- 6
+SELECT product_name, len(product_name) as LENGTH
+FROM production.products
+ORDER BY product_id
+OFFSET 0 ROWS FETCH NEXT 10 ROWS ONLY
+
+-- 7
+SELECT LEFT(phone,3)
+FROM sales.customers
+ORDER BY customer_id
+OFFSET 0 ROWS FETCH NEXT 15 ROWS ONLY
+
+-- 8
+SELECT GETDATE(),LEFT(order_date,4) AS YEAR, LEFT(RIGHT(order_date,5),2) AS MONTH
+FROM sales.orders
+ORDER BY order_id
+OFFSET 0 ROWS FETCH NEXT 10 ROWS ONLY
+
+-- 9
+SELECT p.product_name, c.category_name
+FROM production.products p
+JOIN  production.categories c on p.category_id = c.category_id
+ORDER BY category_name
+OFFSET 0 ROWS FETCH NEXT 10 ROWS ONLY
+
+-- 10
+SELECT c.first_name+' '+c.last_name AS CUSTOMER_NAME, o.order_date
+FROM sales.customers c
+RIGHT JOIN  sales.orders o on c.customer_id = o.customer_id
+ORDER BY o.order_date DESC
+OFFSET 0 ROWS FETCH NEXT 10 ROWS ONLY
+
+-- 11
+SELECT p.product_name, COALESCE(b.brand_name, 'No Brand') AS brand_name
+FROM production.products p
+LEFT JOIN  production.brands b on p.brand_id = b.brand_id
+ORDER BY brand_name
+
+-- 12
+SELECT product_name, list_price
+FROM production.products
+WHERE list_price > (
+  SELECT AVG(list_price) FROM production.products
+);
+
+-- 13
+SELECT customer_id, first_name + ' ' + last_name as customer_name
+FROM sales.customers
+WHERE customer_id IN (
+    SELECT customer_id FROM sales.orders
+)
+ORDER BY customer_name;
+
+-- 14
+SELECT first_name+' '+last_name AS CUSTOMER_NAME,(SELECT COUNT(*) FROM sales.orders o WHERE c.customer_id = o.customer_id) AS TOTAL_NO_OF_ORDERS
+FROM sales.customers c
+
+-- 15
+CREATE VIEW easy_product_list AS
+SELECT
+    p.product_name,
+    c.category_name,
+    p.list_price
+FROM production.products p
+JOIN production.categories c ON p.category_id = c.category_id
+
+-- select from view
+SELECT * FROM easy_product_list
+WHERE list_price > 100
+
+-- 16
+CREATE VIEW customer_info AS
+SELECT
+    customer_id,
+    first_name+' '+last_name as full_name,
+    email,
+    city+' '+state AS location
+FROM sales.customers
+
+-- select from view
+SELECT * FROM customer_info
+WHERE RIGHT(location,2) = 'CA'
+
+-- 17
+SELECT product_name,list_price
+FROM production.products
+WHERE list_price>50 AND list_price<200
+ORDER BY list_price
+
+-- 18
+SELECT state, count(*) AS NO_OF_CUSTOMERS
+FROM sales.customers
+GROUP BY state
+
+-- 19
+SELECT c.category_name, p.product_name, p.list_price
+FROM production.products p
+JOIN production.categories c ON c.category_id = p.category_id
+WHERE p.list_price = (SELECT MAX(p2.list_price) FROM production.products p2 WHERE p.category_id = p2.category_id)
+
+-- 20
+SELECT s.store_name, s.city, (SELECT count(*) FROM sales.orders o WHERE o.store_id = s.store_id)  AS NO_OF_ORDERS
+FROM sales.stores s
