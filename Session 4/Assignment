@@ -26,3 +26,51 @@ SELECT
     END AS order_priority_level
 FROM sales.orders
 ORDER BY order_date;
+
+-- 3
+WITH StaffOrders AS (
+    SELECT 
+        s.*, 
+        (SELECT COUNT(*) FROM sales.orders o WHERE o.staff_id = s.staff_id) AS NO_OF_ORDERS
+    FROM 
+        sales.staffs s
+)
+SELECT 
+    *,
+    CASE 
+        WHEN NO_OF_ORDERS = 0 THEN 'New Staff'
+        WHEN NO_OF_ORDERS BETWEEN 1 AND 10 THEN 'Junior Staff'
+        WHEN NO_OF_ORDERS BETWEEN 11 AND 25 THEN 'Senior Staff'
+        ELSE 'Expert Staff'
+    END AS staff_category
+FROM StaffOrders
+
+-- 4
+SELECT customer_id, first_name+' '+last_name AS FULL_NAME, ISNULL(phone,'Phone Not Available') AS phone,email,street+city+state AS location, zip_code,COALESCE(phone,email,'No Contact Method') AS preferred_contact 
+FROM sales.customers
+
+-- 5
+SELECT p.*, ISNULL(s.quantity,0) AS quantity, (ISNULL(p.list_price/NULLIF(s.quantity,0),0)) AS price_per_unit,
+    CASE 
+        WHEN ISNULL(s.quantity,0) = 0 THEN 'No Quantity'
+        ELSE 'Stock Exists'
+    END AS staff_category
+FROM production.products p
+LEFT JOIN production.stocks s ON s.product_id = p.product_id AND s.store_id = 1
+
+-- 6
+SELECT customer_id,first_name+' '+last_name AS full_name, phone, email, COALESCE(street,'no street')+COALESCE(city,'no city')+COALESCE(state,'no state')+COALESCE(zip_code,'no zip code') AS formatted_address
+FROM sales.customers
+-- 7
+WITH SPENDING AS (
+    SELECT o.customer_id, SUM(oi.quantity*oi.list_price*(1-oi.discount)) AS total_spent
+    FROM sales.orders o
+    JOIN sales.order_items oi ON o.order_id = oi.order_id
+    GROUP BY o.customer_id
+    HAVING SUM(oi.quantity * oi.list_price) > 1500
+)
+
+SELECT c.customer_id, c.first_name, c.last_name, s.total_spent
+FROM sales.customers c
+JOIN SPENDING s ON c.customer_id = s.customer_id
+ORDER BY s.total_spent DESC
