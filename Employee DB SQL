@@ -1,12 +1,3 @@
-DROP TABLE IF EXISTS Employee_Project;
-DROP TABLE IF EXISTS Dependents;
-DROP TABLE IF EXISTS Project;
-IF OBJECT_ID('dbo.Employee', 'U') IS NOT NULL ALTER TABLE Employee DROP CONSTRAINT IF EXISTS FK_Employee_Department;
-IF OBJECT_ID('dbo.Department', 'U') IS NOT NULL ALTER TABLE Department DROP CONSTRAINT IF EXISTS FK_Department_Manager;
-DROP TABLE IF EXISTS Employee;
-DROP TABLE IF EXISTS Department;
-GO
-
 CREATE TABLE Department (
     Dnum INT PRIMARY KEY,
     Dname NVARCHAR(50) NOT NULL UNIQUE,
