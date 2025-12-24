@@ -167,14 +167,12 @@ BEGIN
     SELECT @TotalQuantity = SUM(quantity)
     FROM sales.order_items
     WHERE order_id = @OrderId;
-    IF @TotalQuantity IS NULL
-        SET @TotalQuantity = 0;
     IF @TotalQuantity >= 10
-        SET @Message = '15% OFF (Bulk)';
+        SET @Message = '15% OFF';
     ELSE IF @TotalQuantity >= 6
-        SET @Message = '10% OFF (Large)';
+        SET @Message = '10% OFF';
     ELSE IF @TotalQuantity >= 3
-        SET @Message = '5% OFF (Medium)';
+        SET @Message = '5% OFF';
     ELSE
         SET @Message = 'No Discount';
 
