@@ -1,1 +1,185 @@
+-- 1
+DECLARE @customer_spending DECIMAL(10,2);
+SELECT @customer_spending = SUM(oi.quantity*oi.list_price*(1-oi.discount))
+FROM sales.orders o
+JOIN sales.order_items oi ON o.order_id = oi.order_id
+WHERE o.customer_id = 1
+
+IF @customer_spending > 5000
+BEGIN
+	PRINT('VIP')
+END
+ELSE
+BEGIN
+	PRINT('NOT VIP')
+END
+
+-- 2
+DECLARE @threshold INT = 1500;
+DECLARE @count INT;
+SELECT @count = COUNT(*)
+FROM production.products
+WHERE list_price > @threshold
+PRINT('THRESHOLD IS '+CAST(@threshold AS VARCHAR(10))+' AND COUNT IS '+CAST(@count AS VARCHAR(10)))
+select * from sales.orders
+
+-- 3
+DECLARE @staff_id INT = 2;
+DECLARE @year INT = 2017;
+DECLARE @calculated_total INT;
+SELECT @calculated_total = COUNT(*)
+FROM sales.orders
+WHERE staff_id = @staff_id AND order_date LIKE '2022%'
+PRINT('total orders of staff id: '+CAST(@staff_id AS VARCHAR(10))+' in '+CAST(@year AS VARCHAR(10))+ ' is ' + CAST(@calculated_total AS VARCHAR(10)) + ' orders')
+
+-- 4
+SELECT @@SERVERNAME AS ServerName, @@VERSION AS SqlServerVersion,@@ROWCOUNT AS NoAffectedRows
+
+-- 5
+DECLARE @product_id INT = 1;
+DECLARE @store_id INT = 1;
+DECLARE @quantity INT;
+SELECT @quantity = quantity
+FROM production.stocks
+WHERE product_id = @product_id AND store_id = @store_id
+
+IF @quantity > 20
+BEGIN
+	print('Well stocked')
+END
+ELSE IF @quantity BETWEEN 10 AND 20
+BEGIN
+	print('Moderate stock')
+END
+ELSE IF @quantity < 10
+BEGIN
+	print('Low stock - reorder needed')
+END
+
+-- 6
+DECLARE @MinQuantity INT = 5;
+DECLARE @batch INT = 3;
+DECLARE @UpdatedRows INT = 1;
+WHILE (@UpdatedRows != 0)
+BEGIN
+	UPDATE TOP (@batch) production.stocks
+
+    SET quantity = quantity + 10
+
+    WHERE quantity < @MinQuantity;
+
+    SET @UpdatedRows = @@ROWCOUNT;
+
+    PRINT (CAST(@UpdatedRows AS VARCHAR(10)) + ' rows are updated');
+END
+
+-- 7
+DECLARE @Budget VARCHAR(10) = 'Budget';
+DECLARE @MidRange VARCHAR(10) = 'Mid-Range';
+DECLARE @Premium VARCHAR(10) = 'Premium';
+DECLARE @Luxury VARCHAR(10) = 'Luxury';
+SELECT
+    *,
+    CASE
+        WHEN list_price < 300 THEN @Budget
+        WHEN list_price BETWEEN 300 AND 800 THEN  @MidRange
+        WHEN list_price BETWEEN 801 AND 2000 THEN @Premium
+        ELSE @Luxury
+    END AS price_category
+FROM production.products;
+
+-- 8
+DECLARE @Checked_ID INT = 800000;
+IF EXISTS (SELECT * From sales.customers WHERE customer_id = @Checked_ID)
+    print('ID EXISTS')
+IF NOT EXISTS (SELECT * From sales.customers WHERE customer_id = @Checked_ID)
+    print('ID DOESNT EXIST')
+
+-- 9
+CREATE FUNCTION CalculateShipping (@Total DECIMAL(10, 2))
+RETURNS DECIMAL(10, 2)
+AS
+BEGIN
+    DECLARE @ShippingCost DECIMAL(10, 2);
+    IF @Total > 100
+        SET @ShippingCost = 0.00;
+    ELSE IF @Total BETWEEN 50 AND 99
+        SET @ShippingCost = 5.99;
+    ELSE
+        SET @ShippingCost = 12.99;
+    RETURN @ShippingCost;
+END;
+
+SELECT 
+    order_id, dbo.CalculateShipping(list_price*quantity) AS ShippingCost
+FROM 
+    sales.order_items;
+
+-- 10
+CREATE FUNCTION GetProductsByPriceRange (@MinPrice DECIMAL(10,2), @MaxPrice Decimal(10,2))
+RETURNS TABLE
+AS
+RETURN
+(
+    SELECT p.*, c.category_name, b.brand_name
+    FROM production.products p
+    JOIN production.categories c ON c.category_id = p.category_id
+    JOIN production.brands b ON b.brand_id = p.brand_id
+    WHERE p.list_price BETWEEN @MinPrice AND @MaxPrice
+);
+
+SELECT * FROM dbo.GetProductsByPriceRange(100,1000);
+
+-- 11
+CREATE FUNCTION GetCustomerYearlySummary (@Customer_ID INT)
+RETURNS @YearlySales TABLE
+(
+    year INT,
+    total_orders INT,
+    total_spent DECIMAL(10,2),
+    average_value DECIMAL(10,2)
+)
+AS
+BEGIN
+    INSERT INTO @YearlySales
+    SELECT YEAR(o.order_date) as year, COUNT(*) as total_orders, SUM(oi.quantity * oi.list_price * (1 - oi.discount)) as total_spent, AVG(oi.quantity * oi.list_price * (1 - oi.discount)) as average_value
+
+    FROM sales.orders o
+
+    JOIN sales.order_items oi ON o.order_id = oi.order_id
+
+    WHERE o.customer_id = @Customer_ID
+
+    GROUP BY year(o.order_date);
+
+    RETURN;
+
+END;
+SELECT * FROM dbo.GetCustomerYearlySummary (16);
+
+-- 12
+CREATE FUNCTION GetOrderDiscountStatus (@OrderId INT)
+RETURNS VARCHAR(50)
+AS
+BEGIN
+    DECLARE @TotalQuantity INT;
+    DECLARE @Message VARCHAR(50);
+    SELECT @TotalQuantity = SUM(quantity)
+    FROM sales.order_items
+    WHERE order_id = @OrderId;
+    IF @TotalQuantity IS NULL
+        SET @TotalQuantity = 0;
+    IF @TotalQuantity >= 10
+        SET @Message = '15% OFF (Bulk)';
+    ELSE IF @TotalQuantity >= 6
+        SET @Message = '10% OFF (Large)';
+    ELSE IF @TotalQuantity >= 3
+        SET @Message = '5% OFF (Medium)';
+    ELSE
+        SET @Message = 'No Discount';
+
+    RETURN @Message;
+END;
+
+SELECT dbo.GetOrderDiscountStatus(90)AS DiscountStatus;
 
