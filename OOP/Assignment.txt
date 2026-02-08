@@ -1,0 +1,329 @@
+using System;
+using System.Collections.Generic;
+namespace BankingSystem
+{
+    public abstract class BankAccount
+    {
+        readonly DateTime CreatedDate;
+        protected int _accountNumber;
+        protected static int _counter = 1;
+        protected decimal _balance;
+        protected string[] Transaction = new string[100];
+        protected int transaction_count = 0;
+
+        // Properties
+        public int AccountNumber
+        {
+            get { return _accountNumber; }
+        }
+
+        public decimal Balance
+        {
+            get { return _balance; }
+            set
+            {
+                if (value < 0)
+                    throw new ArgumentException("Balance can not be a negative number (logic error)");
+                else
+                    _balance = value;
+            }
+        }
+
+        // Constructors
+        public BankAccount()
+        {
+            CreatedDate = DateTime.Now;
+            _accountNumber = _counter++;
+        }
+
+        public BankAccount(decimal balance)
+        {
+            CreatedDate = DateTime.Now;
+            _accountNumber = _counter++;
+            Balance = balance;
+        }
+
+        // Methods
+        public virtual decimal CalculateInterest()
+        {
+            return 0;
+        }
+
+        public void Deposit(decimal amount)
+        {
+            Balance += amount;
+            Transaction[transaction_count++] = $"Deposit {amount} at {DateTime.Now}";
+        }
+
+        public virtual void Withdrawl(decimal amount)
+        {
+            if (Balance < amount)
+            {
+                Console.WriteLine("You Don't have enough balance to make this withdrawl operation.");
+                return;
+            }
+            else
+            {
+                Balance -= amount;
+                Transaction[transaction_count++] = $"Withdrawled {amount} at {DateTime.Now}, remaining balance is {Balance}";
+            }
+        }
+
+        public void Transfer(BankAccount receiver, decimal amount)
+        {
+            if (Balance < amount)
+            {
+                Console.WriteLine("You Don't have enough balance to make this transfer operation.");
+            }
+            else
+            {
+                Balance -= amount;
+                receiver.Deposit(amount);
+                Transaction[transaction_count++] = $"Transferred {amount} at {DateTime.Now} to {receiver.AccountNumber}, remaining balance is {Balance}";
+            }
+        }
+        public void displaytransactions()
+        {
+            Console.WriteLine($"\nAccount number {_accountNumber} transaction history: ");
+            for (int i=0; i<transaction_count; i++)
+            {
+                Console.WriteLine($"{Transaction[i]}");
+            }
+        }
+        public abstract void ShowAccountDetails();
+    }
+
+    public class SavingAccount : BankAccount
+    {
+        private decimal _interestRate;
+        public decimal InterestRate
+        {
+            get { return _interestRate; }
+            set { _interestRate = value; }
+        }
+
+        public SavingAccount(decimal balance, decimal interestrate) : base(balance)
+        {
+            InterestRate = interestrate;
+        }
+
+        public override void ShowAccountDetails()
+        {
+            Console.WriteLine("\nAccount Details :-");
+            Console.WriteLine($"Account No: {AccountNumber}");
+            Console.WriteLine($"Balance: {Balance}");
+            Console.WriteLine($"Account Type: Savings");
+        }
+
+        public override decimal CalculateInterest()
+        {
+            return Balance * InterestRate;
+        }
+    }
+
+    public class CurrentAccount : BankAccount
+    {
+        private decimal _overdraftLimit;
+        public decimal OverDraftLimit
+        {
+            get { return _overdraftLimit; }
+            set { _overdraftLimit = value; }
+        }
+
+        public CurrentAccount(decimal balance, decimal overdraftlimit) : base(balance)
+        {
+            OverDraftLimit = overdraftlimit;
+        }
+
+        public override void Withdrawl(decimal amount)
+        {
+            if (Balance + OverDraftLimit < amount)
+            {
+                Console.WriteLine("Overdraft limit is exceeded.");
+                return;
+            }
+            else
+            {
+                Balance -= amount;
+            }
+        }
+
+        public override void ShowAccountDetails()
+        {
+            Console.WriteLine("\nAccount Details :-");
+            Console.WriteLine($"Account No: {AccountNumber}");
+            Console.WriteLine($"Balance: {Balance}");
+            Console.WriteLine($"OverDraft Limit: {_overdraftLimit}");
+            Console.WriteLine($"Account Type: Current");
+        }
+    }
+
+    public class Customer
+    {
+        private static int _idCounter = 1;
+        public int CustomerID { get; private set; }
+        private string _fullName;
+        private string _nationalID;
+        private string _phoneNumber;
+        public string Address { get; set; } 
+        public DateTime DateOfBirth { get; set; }
+        public BankAccount[] Account = new BankAccount[100];
+        private int _accIndex = 0; 
+        public int AccountCount { get { return _accIndex; } } // Helper property for Bank class
+
+        // Properties
+        public string FullName
+        {
+            get { return _fullName; }
+            set
+            {
+                if (string.IsNullOrWhiteSpace(value))
+                    throw new ArgumentException("FullName cannot be empty");
+                else
+                    _fullName = value;
+            }
+        }
+
+        public string NationalID
+        {
+            get { return _nationalID; }
+            set
+            {
+                if (value == null || value.Length != 14)
+                    throw new ArgumentException("NationalID must be exactly 14 digits");
+                else
+                    _nationalID = value;
+            }
+        }
+
+        public string PhoneNumber
+        {
+            get { return _phoneNumber; }
+            set
+            {
+                if (!value.StartsWith("01"))
+                    throw new ArgumentException("PhoneNumber must start with 01");
+                else if (value.Length != 11)
+                    throw new ArgumentException("PhoneNumber must be exactly 11 digits long");
+                else
+                    _phoneNumber = value;
+            }
+        }
+
+        // Constructors
+        public Customer(string fullname, string nationalid, string phonenumber, string address, DateTime dateofbirth)
+        {
+            CustomerID = _idCounter++;
+            FullName = fullname;
+            NationalID = nationalid;
+            PhoneNumber = phonenumber;
+            Address = address;
+            DateOfBirth = dateofbirth;
+        }
+        public void ShowCustomerDetails() 
+        {
+            Console.WriteLine("\nCustomer Details :-");
+            Console.WriteLine($"Customer ID: {CustomerID}");
+            Console.WriteLine($"Fullname: {FullName}");
+            Console.WriteLine($"National Id: {NationalID}");
+            Console.WriteLine($"Phone Number: {PhoneNumber}");
+            Console.WriteLine($"Address: {Address}");
+            Console.WriteLine($"DateOfBirth: {DateOfBirth.ToShortDateString()}");
+        }
+        public void AddAccount(BankAccount account)
+        {
+            if (_accIndex < 100)
+                Account[_accIndex++] = account;
+        }
+
+        public decimal GetTotalBalance()
+        {
+            decimal sum = 0;
+            for (int i = 0; i < _accIndex; i++)
+            {
+                sum += Account[i].Balance;
+            }
+            return sum;
+        }
+    }
+
+    public class Bank
+    {
+        public string Name { get; set; }
+        public string BranchCode { get; set; }
+        private Customer[] _customers = new Customer[100];
+        private int _custCount = 0;
+
+        public Bank(string name, string branchCode)
+        {
+            Name = name;
+            BranchCode = branchCode;
+        }
+
+        public void AddCustomer(Customer customer)
+        {
+            if (_custCount < 100)
+            {
+                _customers[_custCount] = customer;
+                _custCount++;
+            }
+        }
+
+        public void GetCustomer(string nationalid)
+        {
+            for (int i = 0; i < _custCount; i++)
+            {
+                if (_customers[i].NationalID == nationalid)
+                {
+                    _customers[i].ShowCustomerDetails();
+                    return;
+                }
+            }
+            Console.WriteLine("Customer not found");
+        }
+
+        public void BankReport()
+        {
+            Console.WriteLine($"\n{Name} Bank Report");
+
+            for (int i = 0; i < _custCount; i++)
+            {
+                _customers[i].ShowCustomerDetails();
+                Console.WriteLine($"Total Balance: {_customers[i].GetTotalBalance()}");
+                for (int j = 0; j < _customers[i].AccountCount; j++)
+                {
+                    _customers[i].Account[j].ShowAccountDetails();
+                }
+                Console.WriteLine("--------------------------------");
+            }
+        }
+    }
+
+    public class Program
+    {
+        public static void Main(string[] args)
+        {
+            Bank myBank = new Bank("Bank Masr", "BNK001");
+            Customer cust1 = new Customer("Mohamed Eldesouky", "30401012723476", "01152683383", "Kasr El Nile", new DateTime(1990, 5, 20));
+            Customer cust2 = new Customer("Ali Hamed", "30401012323476", "01114715947", "Maadi", new DateTime(1995, 8, 15));
+            myBank.AddCustomer(cust1);
+            myBank.AddCustomer(cust2);
+            BankAccount acc1 = new SavingAccount(balance: 1245, interestrate: 0.2m);
+            BankAccount acc2 = new CurrentAccount(balance: 1000, overdraftlimit: 500);
+            BankAccount acc3 = new SavingAccount(balance: 5000, interestrate: 0.05m);
+            cust1.AddAccount(acc1);
+            cust2.AddAccount(acc2);
+            cust2.AddAccount(acc3);
+            acc1.Deposit(500);
+            acc2.Transfer(acc1, 200); 
+            acc2.Withdrawl(100);
+            Console.WriteLine($"Total Balance for {cust1.FullName} = {cust1.GetTotalBalance()}");
+            Console.WriteLine($"Interests for saving accounts are = {acc1.CalculateInterest()}, {acc3.CalculateInterest()}");
+            myBank.BankReport();
+            myBank.GetCustomer("30401012723476");
+            acc1.displaytransactions();
+            acc2.displaytransactions();
+            acc3.displaytransactions();
+        }
+    }
+}
